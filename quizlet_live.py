@@ -13,7 +13,7 @@ class QuizletGameHandler:
     """Handles the WebSocket connection and game state for a Quizlet Live session."""
 
     def __init__(self, game_info: dict = None, person_id: str = None):
-        self.sio = socketio.Client(logger=True, engineio_logger=True)
+        self.sio = socketio.Client(logger=False, engineio_logger=False)
         self.game_data = game_info
         self.current_state = {}
         self.is_connected = False
@@ -22,11 +22,14 @@ class QuizletGameHandler:
         self.sio.on('connect', self._on_connect)
         self.sio.on('disconnect', self._on_disconnect)
         self.sio.on('current-game-state', self._on_game_state)
+        self.sio.on('current-game-state-and-set', self._on_game_state)
         self.sio.on('current-teams-and-players', self._on_teams_players)
         self.sio.on('game-error', self._on_error)
 
         self.sio.on('matchteam.new-streak', self._on_streak)
         self.sio.on('matchteam.new-answer', self._on_answer)
+
+        self.sio.on('*', self._on_any_event)
 
     def join_game(self, username: str):
         """Connects to the game socket and joins the lobby as `username`."""
@@ -119,3 +122,8 @@ class QuizletGameHandler:
     def _on_answer(self, data):
         """Triggered when an answer is submitted."""
         pass
+
+    def _on_any_event(self, event, data=None):
+        """Logs any event that does not have a specific handler."""
+        print(f"[?] Unknown Event Received: {event}")
+        # print(f"    Data: {json.dumps(data, indent=2)}")
