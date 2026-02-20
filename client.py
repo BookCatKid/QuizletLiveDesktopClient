@@ -8,14 +8,10 @@ class QuizletLiveClient:
     Uses curl_cffi to bypass Cloudflare 403 errors by impersonating Chrome.
     """
 
-    # Discovered in Module 480829
     API_VERIFY_ENDPOINT = "https://quizlet.com/webapi/3.8/multiplayer/game-instance"
-
-    # Discovered in Module 503271
     MP_BASE_URL = "https://mp.quizlet.com"
 
     def __init__(self):
-        # We use a Session to keep cookies (cf_clearance, etc.)
         self.session = requests.Session(impersonate="chrome120")
         self.session.headers.update({
             "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
@@ -26,7 +22,6 @@ class QuizletLiveClient:
         self.token = None
         self.person_id = None
 
-        # Initialize session cookies and token
         self._hydrate_session()
 
     def _hydrate_session(self):
@@ -64,12 +59,11 @@ class QuizletLiveClient:
         if not self.token:
             self._hydrate_session()
 
-        # Update headers for the API call specifically
         api_headers = {
             "Authorization": f"Bearer {self.token}",
             "Accept": "application/json, text/plain, */*",
             "Referer": "https://quizlet.com/live",
-            "CS-Token": self.session.cookies.get("qtkn", "") # Sometimes required
+            "CS-Token": self.session.cookies.get("qtkn", "")
         }
 
         print(f"[*] Verifying code: {code}...")
@@ -81,13 +75,11 @@ class QuizletLiveClient:
                 headers=api_headers
             )
 
-            # API returns 200 even for failures usually, but check status just in case
             if response.status_code == 403:
                 return {"valid": False, "error": "API returned 403 Forbidden. Token might be invalid."}
 
             data = response.json()
 
-            # Logic from Module 601566
             if "error" in data:
                 return {
                     "valid": False,
@@ -101,9 +93,10 @@ class QuizletLiveClient:
 
                 return {
                     "valid": True,
-                    "game_id": instance.get('gameId'),
+                    "instance": instance,
                     "game_uuid": instance.get('gameInstanceUuid'),
                     "game_code": instance.get('gameCode'),
+                    "item_id": instance.get('itemId'),
                     "host_name": instance.get('hostName'),
                     "socket_url": f"{self.MP_BASE_URL}/{server_base}/games/socket",
                     "connection_token": self.token
